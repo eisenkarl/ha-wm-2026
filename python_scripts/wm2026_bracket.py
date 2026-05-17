@@ -39,6 +39,69 @@ KO_ROUNDS = [
     "final",
 ]
 
+# FIFA 3-Buchstaben-Code -> ISO-3166-1 alpha-2 (kleinbuchstaben fuer flagcdn.com).
+# Sonderfaelle fuer UK-Nationen: gb-eng/gb-sct/gb-wls/gb-nir werden von flagcdn unterstuetzt.
+FIFA_TO_ISO2 = {
+    # Europa
+    "GER": "de", "ENG": "gb-eng", "FRA": "fr", "ESP": "es",
+    "NED": "nl", "BEL": "be", "POR": "pt", "ITA": "it",
+    "CRO": "hr", "AUT": "at", "SUI": "ch", "NOR": "no",
+    "SWE": "se", "TUR": "tr", "DEN": "dk", "POL": "pl",
+    "HUN": "hu", "SCO": "gb-sct", "WAL": "gb-wls", "NIR": "gb-nir",
+    "IRL": "ie", "BIH": "ba", "CZE": "cz", "SVK": "sk",
+    "SVN": "si", "SRB": "rs", "ROU": "ro", "GRE": "gr",
+    "BUL": "bg", "UKR": "ua", "ALB": "al", "MKD": "mk",
+    "MNE": "me", "ISL": "is", "FIN": "fi", "MLT": "mt",
+    "LUX": "lu", "CYP": "cy", "EST": "ee", "LVA": "lv",
+    "LTU": "lt", "MDA": "md", "ARM": "am", "AZE": "az",
+    "GEO": "ge", "KAZ": "kz", "BLR": "by", "AND": "ad",
+    "FRO": "fo", "LIE": "li", "GIB": "gi", "SMR": "sm",
+    "KOS": "xk",
+    # Asien
+    "JPN": "jp", "KOR": "kr", "PRK": "kp", "IRN": "ir",
+    "AUS": "au", "KSA": "sa", "QAT": "qa", "UZB": "uz",
+    "JOR": "jo", "IRQ": "iq", "UAE": "ae", "OMA": "om",
+    "BHR": "bh", "KUW": "kw", "LBN": "lb", "SYR": "sy",
+    "CHN": "cn", "VIE": "vn", "THA": "th", "IDN": "id",
+    "MAS": "my", "SGP": "sg", "PHI": "ph", "MYA": "mm",
+    "TPE": "tw", "HKG": "hk", "MAC": "mo", "IND": "in",
+    "PAK": "pk", "BAN": "bd", "SRI": "lk", "NEP": "np",
+    "BHU": "bt", "MDV": "mv", "AFG": "af", "TJK": "tj",
+    "TKM": "tm", "KGZ": "kg", "PLE": "ps", "YEM": "ye",
+    # Afrika
+    "MAR": "ma", "SEN": "sn", "GHA": "gh", "EGY": "eg",
+    "CIV": "ci", "TUN": "tn", "ALG": "dz", "RSA": "za",
+    "CPV": "cv", "COD": "cd", "CMR": "cm", "NGA": "ng",
+    "MLI": "ml", "BFA": "bf", "GUI": "gn", "ANG": "ao",
+    "ZAM": "zm", "ZIM": "zw", "UGA": "ug", "KEN": "ke",
+    "ETH": "et", "TAN": "tz", "GAB": "ga", "BEN": "bj",
+    "TOG": "tg", "MTN": "mr", "MAD": "mg", "MWI": "mw",
+    "MOZ": "mz", "NAM": "na", "GAM": "gm", "GNB": "gw",
+    "LBY": "ly", "RWA": "rw", "BDI": "bi", "BOT": "bw",
+    "SLE": "sl", "LBR": "lr", "EQG": "gq", "CGO": "cg",
+    "CTA": "cf", "STP": "st", "COM": "km", "DJI": "dj",
+    "ERI": "er", "SDN": "sd", "SSD": "ss", "SOM": "so",
+    "LES": "ls", "SWZ": "sz", "NIG": "ne", "CHA": "td",
+    "SEY": "sc",
+    # Nordamerika / Karibik
+    "USA": "us", "CAN": "ca", "MEX": "mx", "PAN": "pa",
+    "CRC": "cr", "HON": "hn", "JAM": "jm", "CUW": "cw",
+    "HAI": "ht", "SLV": "sv", "GUA": "gt", "TRI": "tt",
+    "NCA": "ni", "DOM": "do", "GRN": "gd", "ATG": "ag",
+    "BAR": "bb", "PUR": "pr", "BLZ": "bz", "BER": "bm",
+    "CUB": "cu", "VIR": "vi", "BAH": "bs", "SKN": "kn",
+    "LCA": "lc", "VIN": "vc", "DMA": "dm", "MSR": "ms",
+    "ARU": "aw", "CAY": "ky", "TCA": "tc", "AIA": "ai",
+    # Suedamerika
+    "BRA": "br", "ARG": "ar", "COL": "co", "ECU": "ec",
+    "URU": "uy", "PAR": "py", "CHI": "cl", "PER": "pe",
+    "VEN": "ve", "BOL": "bo", "GUY": "gy", "SUR": "sr",
+    # Ozeanien
+    "NZL": "nz", "FIJ": "fj", "PNG": "pg", "SOL": "sb",
+    "VAN": "vu", "TAH": "pf", "NCL": "nc", "SAM": "ws",
+    "ASA": "as", "COK": "ck", "TGA": "to", "TUV": "tv",
+}
+
 # Lieblings-Team kann via Env-Variable oder CLI-Arg gesetzt werden.
 # Default: GER (Deutschland). Beispiele: AUT, SUI, ITA, BRA, ARG, ESP, ENG, FRA, NED, USA
 FAV_TEAM = "GER"
@@ -75,6 +138,7 @@ def parse_standings(data, fav_abbr):
                 "rank": int(stat_get(stats, "rank", 0)),
                 "team": team.get("displayName", "?"),
                 "abbr": abbr,
+                "iso2": FIFA_TO_ISO2.get(abbr, "un"),
                 "played": int(stat_get(stats, "gamesPlayed", 0)),
                 "won": int(stat_get(stats, "wins", 0)),
                 "draw": int(stat_get(stats, "ties", 0)),
@@ -98,9 +162,11 @@ def compact_event(e, fav_abbr):
 
     def team_info(t):
         team = t.get("team", {}) if t else {}
+        abbr = team.get("abbreviation", "?")
         return {
             "name": team.get("displayName", "TBD"),
-            "abbr": team.get("abbreviation", "?"),
+            "abbr": abbr,
+            "iso2": FIFA_TO_ISO2.get(abbr, "un"),
             "score": int(t.get("score", 0)) if t and t.get("score") not in (None, "") else 0,
             "winner": t.get("winner", False) if t else False,
         }
@@ -162,9 +228,11 @@ def main():
         "count": len(events),
         "fetched_at": datetime.now(timezone.utc).isoformat(),
         "favorite_team": FAV_TEAM,
+        "favorite_iso2": FIFA_TO_ISO2.get(FAV_TEAM, "un"),
         "groups": groups,
         "group_matches": group_matches,
         "ko_matches": ko_matches,
+        "iso2_map": FIFA_TO_ISO2,
     }
     if errors:
         out["errors"] = errors

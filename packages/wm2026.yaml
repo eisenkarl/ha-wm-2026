@@ -24,7 +24,8 @@ input_select:
   wm_2026_favorite_team:
     name: WM 2026 Lieblings-Team
     icon: mdi:flag
-    initial: GER
+    # Kein 'initial:' -> HA merkt sich den zuletzt gewaehlten Wert beim Restart.
+    # Default ist die erste Option (GER).
     options:
       - GER  # Deutschland
       - AUT  # Oesterreich
@@ -109,6 +110,8 @@ command_line:
         - group_matches
         - ko_matches
         - favorite_team
+        - favorite_iso2
+        - iso2_map
         - fetched_at
 
 # -------------------------------------------------------------------

@@ -2,6 +2,18 @@
 
 Alle nennenswerten Aenderungen an diesem Projekt werden hier dokumentiert.
 
+## [1.2.0] - 2026-05-17
+
+### Hinzugefuegt
+- Nationalflaggen-Bilder fuer alle Teams (via flagcdn.com)
+- FIFA-3-Buchstaben zu ISO-3166-2 Mapping mit 200+ Eintraegen
+- `iso2_map` und `favorite_iso2` Attribute am Bracket-Sensor
+- UK-Sonderfaelle: ENG=gb-eng, SCO=gb-sct, WAL=gb-wls, NIR=gb-nir
+
+### Geaendert
+- `input_select.wm_2026_favorite_team`: `initial:` entfernt - HA merkt sich nun den zuletzt gewaehlten Wert ueber Restarts hinweg
+- Dashboard-Karten zeigen jetzt Flag-PNGs neben jedem Team-Namen
+
 ## [1.0.1] - 2026-05-17
 
 ### Hinzugefuegt
