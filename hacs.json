@@ -1,0 +1,8 @@
+{
+  "name": "WM 2026 - FIFA World Cup Tracker",
+  "render_readme": true,
+  "homeassistant": "2024.6.0",
+  "country": ["DE", "AT", "CH"],
+  "content_in_root": false,
+  "filename": "wm2026.yaml"
+}

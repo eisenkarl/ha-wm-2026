@@ -1,0 +1,380 @@
+# ===================================================================
+# Home Assistant Package: WM 2026 - FIFA World Cup Tracker
+# ===================================================================
+# Lieferung von Tagesuebersicht, kompletter Gruppenphase mit Tabellen,
+# KO-Phase mit Sieger-Hervorhebung und Lieblings-Team-Tracker.
+#
+# Datenquelle: ESPN inoffizielle JSON-API (kein API-Key noetig).
+# Update-Intervall: 5-30 Minuten (siehe scan_interval pro Sensor).
+#
+# Voraussetzungen (siehe README.md):
+#   1. Package-Support in configuration.yaml aktiviert
+#   2. Script wm2026_bracket.py unter /config/python_scripts/ vorhanden
+#      (HINWEIS: Der HA-eigene 'python_scripts' Sandbox-Pfad ist NICHT
+#       gemeint, hier wird das Skript ueber command_line ausgefuehrt)
+#
+# Konfiguration: Lieblings-Team aendern via UI ueber
+#   helpers -> input_select.wm_2026_favorite_team
+# ===================================================================
+
+# -------------------------------------------------------------------
+# Helper: Lieblings-Team waehlen (input_select mit allen 48 WM-Teams)
+# -------------------------------------------------------------------
+input_select:
+  wm_2026_favorite_team:
+    name: WM 2026 Lieblings-Team
+    icon: mdi:flag
+    initial: GER
+    options:
+      - GER  # Deutschland
+      - AUT  # Oesterreich
+      - SUI  # Schweiz
+      - ITA  # Italien (falls qualifiziert)
+      - ENG  # England
+      - FRA  # Frankreich
+      - ESP  # Spanien
+      - NED  # Niederlande
+      - BEL  # Belgien
+      - POR  # Portugal
+      - CRO  # Kroatien
+      - BRA  # Brasilien
+      - ARG  # Argentinien
+      - MEX  # Mexiko
+      - USA  # USA
+      - CAN  # Kanada
+      - JPN  # Japan
+      - KOR  # Suedkorea
+      - NOR  # Norwegen
+      - SWE  # Schweden
+      - TUR  # Tuerkei
+      - MAR  # Marokko
+      - SEN  # Senegal
+      - AUS  # Australien
+      - NZL  # Neuseeland
+      - URU  # Uruguay
+      - PAR  # Paraguay
+      - COL  # Kolumbien
+      - ECU  # Ecuador
+      - GHA  # Ghana
+      - EGY  # Aegypten
+      - CIV  # Elfenbeinkueste
+      - TUN  # Tunesien
+      - ALG  # Algerien
+      - SCO  # Schottland
+      - IRN  # Iran
+      - KSA  # Saudi-Arabien
+      - QAT  # Katar
+      - JOR  # Jordanien
+      - IRQ  # Irak
+      - UZB  # Usbekistan
+      - HAI  # Haiti
+      - PAN  # Panama
+      - CUW  # Curacao
+      - CPV  # Kap Verde
+      - BIH  # Bosnien-Herzegowina
+      - COD  # DR Kongo
+      - RSA  # Suedafrika
+      - CZE  # Tschechien
+
+# -------------------------------------------------------------------
+# REST-Sensor: Aktuelle / naechste WM-Spiele (kleines Fenster)
+# -------------------------------------------------------------------
+rest:
+  - resource: https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard
+    scan_interval: 300
+    sensor:
+      - name: WM 2026 API
+        unique_id: wm_2026_api
+        icon: mdi:soccer
+        value_template: "{{ value_json.events | length }}"
+        json_attributes:
+          - events
+
+# -------------------------------------------------------------------
+# Command-Line-Sensor: Vollstaendiger Bracket via Python-Skript
+# -------------------------------------------------------------------
+command_line:
+  - sensor:
+      name: WM 2026 Bracket
+      unique_id: wm_2026_bracket
+      # Skript-Aufruf mit gewaehltem Lieblings-Team als Argument
+      command: >-
+        python3 /config/python_scripts/wm2026_bracket.py
+        "{{ states('input_select.wm_2026_favorite_team') }}"
+      scan_interval: 1800
+      command_timeout: 30
+      value_template: "{{ value_json.count }}"
+      json_attributes:
+        - groups
+        - group_matches
+        - ko_matches
+        - favorite_team
+        - fetched_at
+
+# -------------------------------------------------------------------
+# Template-Sensoren: heutige + naechste Spiele
+# -------------------------------------------------------------------
+template:
+  - sensor:
+      - name: WM 2026 Spiele Heute
+        unique_id: wm_2026_spiele_heute
+        icon: mdi:soccer
+        state: >-
+          {% set events = state_attr('sensor.wm_2026_api', 'events') or [] %}
+          {% set today = now().date() %}
+          {% set ns = namespace(c=0) %}
+          {% for e in events %}
+            {% if as_datetime(e.date).astimezone(now().tzinfo).date() == today %}
+              {% set ns.c = ns.c + 1 %}
+            {% endif %}
+          {% endfor %}
+          {{ ns.c }}
+        attributes:
+          spiele: >-
+            {% set events = state_attr('sensor.wm_2026_api', 'events') or [] %}
+            {% set fav = states('input_select.wm_2026_favorite_team') %}
+            {% set today = now().date() %}
+            {% set games = namespace(list=[]) %}
+            {% for e in events %}
+              {% set kickoff = as_datetime(e.date).astimezone(now().tzinfo) %}
+              {% if kickoff.date() == today %}
+                {% set c = e.competitions[0] %}
+                {% set home = c.competitors | selectattr('homeAway','eq','home') | list | first %}
+                {% set away = c.competitors | selectattr('homeAway','eq','away') | list | first %}
+                {% set is_fav = (home.team.abbreviation == fav) or (away.team.abbreviation == fav) %}
+                {% set status = c.status.type.name %}
+                {% set game = {
+                  'kickoff': kickoff.strftime('%H:%M'),
+                  'kickoff_iso': kickoff.isoformat(),
+                  'home': home.team.displayName,
+                  'home_abbr': home.team.abbreviation,
+                  'home_score': home.score | int(0),
+                  'away': away.team.displayName,
+                  'away_abbr': away.team.abbreviation,
+                  'away_score': away.score | int(0),
+                  'short_name': e.shortName,
+                  'venue': c.venue.fullName if c.venue is defined else '',
+                  'city': c.venue.address.city if c.venue is defined else '',
+                  'status': c.status.type.description,
+                  'status_id': status,
+                  'is_live': status in ['STATUS_IN_PROGRESS','STATUS_HALFTIME'],
+                  'is_final': status == 'STATUS_FULL_TIME',
+                  'is_favorite': is_fav
+                } %}
+                {% set games.list = games.list + [game] %}
+              {% endif %}
+            {% endfor %}
+            {{ games.list | sort(attribute='kickoff_iso') }}
+
+      - name: WM 2026 Naechster Spieltag
+        unique_id: wm_2026_naechster_spieltag
+        icon: mdi:calendar-clock
+        state: >-
+          {% set events = state_attr('sensor.wm_2026_api', 'events') or [] %}
+          {% set today = now().date() %}
+          {% set ns = namespace(day=None) %}
+          {% for e in events | sort(attribute='date') %}
+            {% set d = as_datetime(e.date).astimezone(now().tzinfo).date() %}
+            {% if d >= today and ns.day is none %}
+              {% set ns.day = d %}
+            {% endif %}
+          {% endfor %}
+          {{ ns.day | string if ns.day else 'keine' }}
+        attributes:
+          ist_heute: >-
+            {% set events = state_attr('sensor.wm_2026_api', 'events') or [] %}
+            {% set today = now().date() %}
+            {% set ns = namespace(found=false) %}
+            {% for e in events %}
+              {% if as_datetime(e.date).astimezone(now().tzinfo).date() == today %}
+                {% set ns.found = true %}
+              {% endif %}
+            {% endfor %}
+            {{ ns.found }}
+          tage_bis: >-
+            {% set events = state_attr('sensor.wm_2026_api', 'events') or [] %}
+            {% set today = now().date() %}
+            {% set ns = namespace(day=None) %}
+            {% for e in events | sort(attribute='date') %}
+              {% set d = as_datetime(e.date).astimezone(now().tzinfo).date() %}
+              {% if d >= today and ns.day is none %}
+                {% set ns.day = d %}
+              {% endif %}
+            {% endfor %}
+            {{ (ns.day - today).days if ns.day else 0 }}
+          spiele: >-
+            {% set events = state_attr('sensor.wm_2026_api', 'events') or [] %}
+            {% set fav = states('input_select.wm_2026_favorite_team') %}
+            {% set today = now().date() %}
+            {% set ns = namespace(day=None) %}
+            {% for e in events | sort(attribute='date') %}
+              {% set d = as_datetime(e.date).astimezone(now().tzinfo).date() %}
+              {% if d >= today and ns.day is none %}
+                {% set ns.day = d %}
+              {% endif %}
+            {% endfor %}
+            {% set games = namespace(list=[]) %}
+            {% if ns.day %}
+              {% for e in events | sort(attribute='date') %}
+                {% set kickoff = as_datetime(e.date).astimezone(now().tzinfo) %}
+                {% if kickoff.date() == ns.day %}
+                  {% set c = e.competitions[0] %}
+                  {% set home = c.competitors | selectattr('homeAway','eq','home') | list | first %}
+                  {% set away = c.competitors | selectattr('homeAway','eq','away') | list | first %}
+                  {% set is_fav = (home.team.abbreviation == fav) or (away.team.abbreviation == fav) %}
+                  {% set status = c.status.type.name %}
+                  {% set game = {
+                    'kickoff': kickoff.strftime('%H:%M'),
+                    'kickoff_iso': kickoff.isoformat(),
+                    'home': home.team.displayName,
+                    'home_abbr': home.team.abbreviation,
+                    'home_score': home.score | int(0),
+                    'away': away.team.displayName,
+                    'away_abbr': away.team.abbreviation,
+                    'away_score': away.score | int(0),
+                    'short_name': e.shortName,
+                    'venue': c.venue.fullName if c.venue is defined else '',
+                    'city': c.venue.address.city if c.venue is defined else '',
+                    'status': c.status.type.description,
+                    'status_id': status,
+                    'is_live': status in ['STATUS_IN_PROGRESS','STATUS_HALFTIME'],
+                    'is_final': status == 'STATUS_FULL_TIME',
+                    'is_favorite': is_fav
+                  } %}
+                  {% set games.list = games.list + [game] %}
+                {% endif %}
+              {% endfor %}
+            {% endif %}
+            {{ games.list | sort(attribute='kickoff_iso') }}
+
+      - name: WM 2026 Lieblings-Team Naechstes Spiel
+        unique_id: wm_2026_fav_naechstes
+        icon: mdi:flag
+        state: >-
+          {% set fav = states('input_select.wm_2026_favorite_team') %}
+          {% set group_m = state_attr('sensor.wm_2026_bracket','group_matches') or {} %}
+          {% set ko_m = state_attr('sensor.wm_2026_bracket','ko_matches') or {} %}
+          {% set ns = namespace(found=None) %}
+          {% for matches in group_m.values() %}
+            {% for m in matches | sort(attribute='date') %}
+              {% if m.favorite and ns.found is none and not m.is_final %}
+                {% set ns.found = m %}
+              {% endif %}
+            {% endfor %}
+          {% endfor %}
+          {% for matches in ko_m.values() %}
+            {% for m in matches | sort(attribute='date') %}
+              {% if m.favorite and ns.found is none and not m.is_final %}
+                {% set ns.found = m %}
+              {% endif %}
+            {% endfor %}
+          {% endfor %}
+          {% if ns.found %}
+            {{ as_datetime(ns.found.date).isoformat() }}
+          {% else %}
+            unbekannt
+          {% endif %}
+        attributes:
+          gegner: >-
+            {% set fav = states('input_select.wm_2026_favorite_team') %}
+            {% set group_m = state_attr('sensor.wm_2026_bracket','group_matches') or {} %}
+            {% set ko_m = state_attr('sensor.wm_2026_bracket','ko_matches') or {} %}
+            {% set ns = namespace(found=None) %}
+            {% for matches in group_m.values() %}
+              {% for m in matches | sort(attribute='date') %}
+                {% if m.favorite and ns.found is none and not m.is_final %}
+                  {% set ns.found = m %}
+                {% endif %}
+              {% endfor %}
+            {% endfor %}
+            {% for matches in ko_m.values() %}
+              {% for m in matches | sort(attribute='date') %}
+                {% if m.favorite and ns.found is none and not m.is_final %}
+                  {% set ns.found = m %}
+                {% endif %}
+              {% endfor %}
+            {% endfor %}
+            {% if ns.found %}
+              {{ ns.found.away.name if ns.found.home.abbr == fav else ns.found.home.name }}
+            {% endif %}
+          spielort: >-
+            {% set fav = states('input_select.wm_2026_favorite_team') %}
+            {% set group_m = state_attr('sensor.wm_2026_bracket','group_matches') or {} %}
+            {% set ko_m = state_attr('sensor.wm_2026_bracket','ko_matches') or {} %}
+            {% set ns = namespace(found=None) %}
+            {% for matches in group_m.values() %}
+              {% for m in matches | sort(attribute='date') %}
+                {% if m.favorite and ns.found is none and not m.is_final %}
+                  {% set ns.found = m %}
+                {% endif %}
+              {% endfor %}
+            {% endfor %}
+            {% for matches in ko_m.values() %}
+              {% for m in matches | sort(attribute='date') %}
+                {% if m.favorite and ns.found is none and not m.is_final %}
+                  {% set ns.found = m %}
+                {% endif %}
+              {% endfor %}
+            {% endfor %}
+            {% if ns.found %}{{ ns.found.city }}{% endif %}
+          status: >-
+            {% set fav = states('input_select.wm_2026_favorite_team') %}
+            {% set group_m = state_attr('sensor.wm_2026_bracket','group_matches') or {} %}
+            {% set ko_m = state_attr('sensor.wm_2026_bracket','ko_matches') or {} %}
+            {% set ns = namespace(found=None) %}
+            {% for matches in group_m.values() %}
+              {% for m in matches | sort(attribute='date') %}
+                {% if m.favorite and ns.found is none and not m.is_final %}
+                  {% set ns.found = m %}
+                {% endif %}
+              {% endfor %}
+            {% endfor %}
+            {% for matches in ko_m.values() %}
+              {% for m in matches | sort(attribute='date') %}
+                {% if m.favorite and ns.found is none and not m.is_final %}
+                  {% set ns.found = m %}
+                {% endif %}
+              {% endfor %}
+            {% endfor %}
+            {% if ns.found %}{{ ns.found.status }}{% endif %}
+          live_state: >-
+            {% set fav = states('input_select.wm_2026_favorite_team') %}
+            {% set events = state_attr('sensor.wm_2026_api','events') or [] %}
+            {% set ns = namespace(found='idle') %}
+            {% for e in events | sort(attribute='date') %}
+              {% set c = e.competitions[0] %}
+              {% set abbrs = c.competitors | map(attribute='team.abbreviation') | list %}
+              {% if fav in abbrs and ns.found == 'idle' %}
+                {% set status_name = c.status.type.name %}
+                {% if status_name == 'STATUS_HALFTIME' %}
+                  {% set ns.found = 'halftime' %}
+                {% elif status_name == 'STATUS_FULL_TIME' %}
+                  {% set ns.found = 'fulltime' %}
+                {% elif status_name == 'STATUS_IN_PROGRESS' %}
+                  {% set ns.found = 'live' %}
+                {% endif %}
+              {% endif %}
+            {% endfor %}
+            {{ ns.found }}
+          spielstand: >-
+            {% set fav = states('input_select.wm_2026_favorite_team') %}
+            {% set group_m = state_attr('sensor.wm_2026_bracket','group_matches') or {} %}
+            {% set ko_m = state_attr('sensor.wm_2026_bracket','ko_matches') or {} %}
+            {% set ns = namespace(found=None) %}
+            {% for matches in group_m.values() %}
+              {% for m in matches | sort(attribute='date') %}
+                {% if m.favorite and ns.found is none and not m.is_final %}
+                  {% set ns.found = m %}
+                {% endif %}
+              {% endfor %}
+            {% endfor %}
+            {% for matches in ko_m.values() %}
+              {% for m in matches | sort(attribute='date') %}
+                {% if m.favorite and ns.found is none and not m.is_final %}
+                  {% set ns.found = m %}
+                {% endif %}
+              {% endfor %}
+            {% endfor %}
+            {% if ns.found %}
+              {{ ns.found.home.abbr }} {{ ns.found.home.score }}:{{ ns.found.away.score }} {{ ns.found.away.abbr }}
+            {% endif %}

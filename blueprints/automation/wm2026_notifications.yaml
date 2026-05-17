@@ -1,0 +1,155 @@
+blueprint:
+  name: WM 2026 - Push-Benachrichtigungen
+  description: |
+    Sendet Push-Benachrichtigungen rund um die WM 2026:
+    * Taegliche Vorschau (Uhrzeit waehlbar) mit Liste aller heutigen Spiele
+    * Anpfiff-Reminder fuer das Lieblings-Team (10 Min vor Spielbeginn)
+    * Live-Updates: Halbzeit + Schlusspfiff fuer Lieblings-Team-Spiele
+
+    Voraussetzungen:
+      * Package wm2026 ist installiert (sensor.wm_2026_*)
+      * Mobile App Companion mit notify-Service eingerichtet
+  domain: automation
+  source_url: https://github.com/eisenk/ha-wm-2026
+  input:
+    notify_service:
+      name: Benachrichtigungs-Service
+      description: Welcher notify-Service soll die Pushes erhalten? (z.B. notify.mobile_app_eisenphone)
+      selector:
+        text:
+    daily_preview_time:
+      name: Uhrzeit Tagesvorschau
+      description: Wann soll die Tages-Vorschau-Push gesendet werden?
+      default: "08:00:00"
+      selector:
+        time:
+    enable_preview:
+      name: Tagesvorschau aktivieren
+      description: Morgens Push mit allen heutigen Spielen
+      default: true
+      selector:
+        boolean:
+    enable_kickoff:
+      name: Anpfiff-Reminder aktivieren
+      description: 10 Min vor jedem Lieblings-Team-Spiel
+      default: true
+      selector:
+        boolean:
+    enable_live_updates:
+      name: Live-Updates aktivieren
+      description: Halbzeit + Schlusspfiff fuer Lieblings-Team-Spiele
+      default: true
+      selector:
+        boolean:
+
+trigger:
+  - platform: time
+    at: !input daily_preview_time
+    id: daily_preview
+  - platform: template
+    value_template: >-
+      {% set kickoff = states('sensor.wm_2026_lieblings_team_naechstes_spiel') %}
+      {% if kickoff not in ['unknown','unavailable','unbekannt',''] %}
+        {% set diff = (as_datetime(kickoff) - now()).total_seconds() | int %}
+        {{ 540 <= diff <= 600 }}
+      {% else %}
+        false
+      {% endif %}
+    id: kickoff_reminder
+  - platform: state
+    entity_id: sensor.wm_2026_lieblings_team_naechstes_spiel
+    attribute: live_state
+    to: halftime
+    id: halftime
+  - platform: state
+    entity_id: sensor.wm_2026_lieblings_team_naechstes_spiel
+    attribute: live_state
+    to: fulltime
+    id: fulltime
+
+action:
+  - choose:
+      # === Tagesvorschau ===
+      - conditions:
+          - condition: trigger
+            id: daily_preview
+          - "{{ enable_preview }}"
+          - condition: numeric_state
+            entity_id: sensor.wm_2026_spiele_heute
+            above: 0
+        sequence:
+          - service: "{{ notify_service }}"
+            data:
+              title: WM 2026 - Spiele heute
+              message: >-
+                {% set games = state_attr('sensor.wm_2026_spiele_heute','spiele') or [] %}
+                {% set fav = states('input_select.wm_2026_favorite_team') %}
+                {%- for g in games -%}
+                {{ g.kickoff }}  {{ g.home_abbr }} vs {{ g.away_abbr }}{% if g.is_favorite %}  ({{ fav }}){% endif %}{% if not loop.last %}
+                {% endif %}
+                {%- endfor %}
+              data:
+                push:
+                  interruption-level: time-sensitive
+                group: wm2026
+                tag: wm2026_tagesvorschau
+
+      # === Anpfiff-Reminder ===
+      - conditions:
+          - condition: trigger
+            id: kickoff_reminder
+          - "{{ enable_kickoff }}"
+        sequence:
+          - service: "{{ notify_service }}"
+            data:
+              title: >-
+                Gleich geht's los! ({{ states('input_select.wm_2026_favorite_team') }})
+              message: >-
+                {% set gegner = state_attr('sensor.wm_2026_lieblings_team_naechstes_spiel','gegner') %}
+                {% set ort = state_attr('sensor.wm_2026_lieblings_team_naechstes_spiel','spielort') %}
+                {{ states('input_select.wm_2026_favorite_team') }} gegen {{ gegner }} in 10 Minuten{% if ort %} - {{ ort }}{% endif %}.
+              data:
+                push:
+                  interruption-level: time-sensitive
+                group: wm2026
+                tag: wm2026_kickoff
+
+      # === Halbzeit ===
+      - conditions:
+          - condition: trigger
+            id: halftime
+          - "{{ enable_live_updates }}"
+        sequence:
+          - service: "{{ notify_service }}"
+            data:
+              title: >-
+                Halbzeit - {{ states('input_select.wm_2026_favorite_team') }}
+              message: >-
+                {{ state_attr('sensor.wm_2026_lieblings_team_naechstes_spiel','spielstand') }}
+                ({{ state_attr('sensor.wm_2026_lieblings_team_naechstes_spiel','gegner') }})
+              data:
+                push:
+                  interruption-level: time-sensitive
+                group: wm2026
+                tag: wm2026_live
+
+      # === Schlusspfiff ===
+      - conditions:
+          - condition: trigger
+            id: fulltime
+          - "{{ enable_live_updates }}"
+        sequence:
+          - service: "{{ notify_service }}"
+            data:
+              title: >-
+                Schlusspfiff - {{ states('input_select.wm_2026_favorite_team') }}
+              message: >-
+                {{ state_attr('sensor.wm_2026_lieblings_team_naechstes_spiel','spielstand') }}
+                ({{ state_attr('sensor.wm_2026_lieblings_team_naechstes_spiel','gegner') }})
+              data:
+                push:
+                  interruption-level: time-sensitive
+                group: wm2026
+                tag: wm2026_live
+
+mode: single

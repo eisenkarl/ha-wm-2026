@@ -1,0 +1,169 @@
+# ===================================================================
+# WM 2026 Dashboard - Beispiel-Konfiguration
+# ===================================================================
+# Diese Datei NICHT in /config/ ablegen, sondern den Inhalt im
+# Raw-Konfigurations-Editor eines neuen Dashboards einfuegen:
+#   Einstellungen -> Dashboards -> Dashboard hinzufuegen
+#   -> "Neues Dashboard von Grund auf"
+#   -> Neues Dashboard oeffnen -> Stift -> 3-Punkte-Menue
+#   -> "Raw-Konfigurations-Editor"
+#   -> kompletten Inhalt durch diese YAML ersetzen
+#
+# Das Lieblings-Team wird oben als Auswahl-Karte angezeigt und
+# steuert die Highlight-Markierung in allen folgenden Karten.
+# ===================================================================
+
+title: WM 2026
+views:
+  - title: WM 2026
+    path: wm-2026
+    icon: mdi:soccer
+    cards:
+      # Lieblings-Team-Auswahl (Helper-Karte)
+      - type: entities
+        title: Einstellungen
+        show_header_toggle: false
+        entities:
+          - entity: input_select.wm_2026_favorite_team
+            name: Lieblings-Team
+
+      # Tagesuebersicht / naechster Spieltag
+      - type: markdown
+        title: WM 2026 - Tagesuebersicht
+        content: |
+          {% set today_count = states('sensor.wm_2026_spiele_heute') | int(0) %}
+          {% set today_games = state_attr('sensor.wm_2026_spiele_heute','spiele') or [] %}
+          {% set next_day = states('sensor.wm_2026_naechster_spieltag') %}
+          {% set next_games = state_attr('sensor.wm_2026_naechster_spieltag','spiele') or [] %}
+          {% set tage_bis = state_attr('sensor.wm_2026_naechster_spieltag','tage_bis') | int(0) %}
+          {% set fav = states('input_select.wm_2026_favorite_team') %}
+
+          {% if today_count > 0 %}
+          ### Heute - {{ now().strftime('%A, %d.%m.%Y') }}
+          {% set games = today_games %}
+          {% elif next_day != 'keine' %}
+          ### Naechster Spieltag: {{ as_datetime(next_day).strftime('%A, %d.%m.%Y') }}
+          *(in {{ tage_bis }} Tag{{ 'en' if tage_bis != 1 else '' }})*
+          {% set games = next_games %}
+          {% else %}
+          ### Keine WM-Spiele in Sicht
+          {% set games = [] %}
+          {% endif %}
+
+          {% if games | length > 0 %}
+          | Zeit | Begegnung | Status | Ort |
+          |------|-----------|--------|-----|
+          {% for g in games -%}
+          | **{{ g.kickoff }}** | {% if g.is_favorite %}**[{{ fav }}] {{ g.home }} - {{ g.away }}**{% else %}{{ g.home }} - {{ g.away }}{% endif %}{% if g.is_live or g.is_final %} ({{ g.home_score }}:{{ g.away_score }}){% endif %} | {{ g.status }} | {{ g.city }} |
+          {% endfor %}
+          {% endif %}
+
+      # Lieblings-Team Fokus
+      - type: markdown
+        title: Lieblings-Team - Alle Spiele
+        content: |
+          {% set fav = states('input_select.wm_2026_favorite_team') %}
+          {% set all_fav = namespace(list=[]) %}
+          {% set group_m = state_attr('sensor.wm_2026_bracket','group_matches') or {} %}
+          {% set ko_m = state_attr('sensor.wm_2026_bracket','ko_matches') or {} %}
+          {% set phase_labels = {
+            'round-of-32': 'Sechzehntelfinale',
+            'round-of-16': 'Achtelfinale',
+            'quarterfinals': 'Viertelfinale',
+            'semifinals': 'Halbfinale',
+            '3rd-place-match': 'Spiel um Platz 3',
+            'final': 'Finale'
+          } %}
+          {% for matches in group_m.values() %}
+            {% for m in matches %}
+              {% if m.favorite %}
+                {% set all_fav.list = all_fav.list + [{'phase':'Gruppenphase','m':m}] %}
+              {% endif %}
+            {% endfor %}
+          {% endfor %}
+          {% for slug, matches in ko_m.items() %}
+            {% for m in matches %}
+              {% if m.favorite %}
+                {% set all_fav.list = all_fav.list + [{'phase': phase_labels.get(slug, slug),'m':m}] %}
+              {% endif %}
+            {% endfor %}
+          {% endfor %}
+
+          **Team:** {{ fav }}
+
+          {% if all_fav.list | length == 0 %}
+          *Noch keine {{ fav }}-Spiele im Bracket.*
+          {% else %}
+          | Phase | Datum | Begegnung | Status |
+          |-------|-------|-----------|--------|
+          {% for entry in all_fav.list | sort(attribute='m.date') -%}
+          | {{ entry.phase }} | {{ as_datetime(entry.m.date).strftime('%d.%m. %H:%M') }} | {% if entry.m.home.winner %}**{{ entry.m.home.name }}**{% else %}{{ entry.m.home.name }}{% endif %} {% if entry.m.is_final or entry.m.is_live %}**{{ entry.m.home.score }}:{{ entry.m.away.score }}**{% else %}-{% endif %} {% if entry.m.away.winner %}**{{ entry.m.away.name }}**{% else %}{{ entry.m.away.name }}{% endif %} | {{ entry.m.status }} |
+          {% endfor %}
+          {% endif %}
+
+      # Gruppenphase
+      - type: markdown
+        title: WM 2026 - Gruppenphase
+        content: |
+          {% set fav = states('input_select.wm_2026_favorite_team') %}
+          {% set groups = state_attr('sensor.wm_2026_bracket','groups') or {} %}
+          {% set matches = state_attr('sensor.wm_2026_bracket','group_matches') or {} %}
+          {% for g in groups.keys() | sort %}
+          {% set teams = groups[g] %}
+          {% set is_fav_group = teams | selectattr('favorite') | list | length > 0 %}
+
+          ### Gruppe {{ g }}{% if is_fav_group %} ⭐{% endif %}
+
+          | # | Team | Sp | S | U | N | Tore | Diff | Pkt |
+          |---|------|----|----|----|----|------|------|-----|
+          {% for t in teams -%}
+          | {{ t.rank }} | {% if t.favorite %}**{{ t.team }}** ⭐{% else %}{{ t.team }}{% endif %} | {{ t.played }} | {{ t.won }} | {{ t.draw }} | {{ t.loss }} | {{ t.gf }}:{{ t.ga }} | {{ '%+d' % t.gd }} | **{{ t.pts }}** |
+          {% endfor %}
+
+          {% set games = matches.get(g, []) %}
+          {% if games | length > 0 %}
+          **Spiele:**
+          {% for m in games -%}
+          - {{ as_datetime(m.date).strftime('%d.%m. %H:%M') }}: {% if m.favorite %}⭐ {% endif -%}
+          {% if m.home.winner %}**{{ m.home.name }}**{% else %}{{ m.home.name }}{% endif %}
+          {%- if m.is_final or m.is_live %} **{{ m.home.score }}:{{ m.away.score }}** {% else %} - {% endif -%}
+          {% if m.away.winner %}**{{ m.away.name }}**{% else %}{{ m.away.name }}{% endif %}
+          {% endfor %}
+          {% endif %}
+
+          ---
+          {% endfor %}
+
+      # KO-Phase
+      - type: markdown
+        title: WM 2026 - KO-Phase
+        content: |
+          {% set ko = state_attr('sensor.wm_2026_bracket','ko_matches') or {} %}
+          {% set labels = {
+            'round-of-32': 'Sechzehntelfinale',
+            'round-of-16': 'Achtelfinale',
+            'quarterfinals': 'Viertelfinale',
+            'semifinals': 'Halbfinale',
+            '3rd-place-match': 'Spiel um Platz 3',
+            'final': 'Finale'
+          } %}
+          {% for slug, label in labels.items() %}
+          ### {{ label }}
+
+          {% set games = ko.get(slug, []) %}
+          {% if games | length == 0 %}
+          *(Keine Daten)*
+          {% else %}
+          | Datum | Begegnung | Ort |
+          |-------|-----------|-----|
+          {% for g in games -%}
+          | **{{ as_datetime(g.date).strftime('%d.%m. %H:%M') }}** | {% if g.favorite %}⭐ {% endif -%}
+          {% if g.home.winner %}**{{ g.home.name }}**{% else %}{{ g.home.name }}{% endif -%}
+          {% if g.is_final or g.is_live %} **{{ g.home.score }}:{{ g.away.score }}**{% endif %} - {% if g.away.winner %}**{{ g.away.name }}**{% else %}{{ g.away.name }}{% endif %} | {{ g.city }} |
+          {% endfor %}
+          {% endif %}
+
+          {% endfor %}
+
+          ---
+          *Aktualisiert: {{ as_datetime(state_attr('sensor.wm_2026_bracket','fetched_at')).strftime('%d.%m.%Y %H:%M') if state_attr('sensor.wm_2026_bracket','fetched_at') else '-' }}*
