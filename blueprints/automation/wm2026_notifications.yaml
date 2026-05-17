@@ -1,43 +1,44 @@
 blueprint:
-  name: WM 2026 - Push-Benachrichtigungen
+  name: WM 2026 - Push Notifications (de/en)
   description: |
-    Sendet Push-Benachrichtigungen rund um die WM 2026:
-    * Taegliche Vorschau (Uhrzeit waehlbar) mit Liste aller heutigen Spiele
-    * Anpfiff-Reminder fuer das Lieblings-Team (10 Min vor Spielbeginn)
-    * Live-Updates: Halbzeit + Schlusspfiff fuer Lieblings-Team-Spiele
+    Sendet Push-Benachrichtigungen rund um die WM 2026 / WC 2026:
+    * Tagesvorschau / Daily preview at chosen time
+    * Anpfiff-Reminder / Kick-off reminder (10 min before favorite team match)
+    * Halbzeit + Schlusspfiff / Half-time + Full-time updates
 
-    Voraussetzungen:
-      * Package wm2026 ist installiert (sensor.wm_2026_*)
-      * Mobile App Companion mit notify-Service eingerichtet
+    Texte werden aus sensor.wm_2026_bracket Attribut 't' (i18n) geladen.
+    Sprache umstellen via input_select.wm_2026_language.
+
+    Voraussetzungen / Requirements:
+      * Package wm2026 is installed (sensor.wm_2026_*)
+      * Mobile App Companion notify-Service ready
   domain: automation
-  source_url: https://github.com/eisenk/ha-wm-2026
+  source_url: https://github.com/eisenkarl/ha-wm-2026
   input:
     notify_service:
-      name: Benachrichtigungs-Service
-      description: Welcher notify-Service soll die Pushes erhalten? (z.B. notify.mobile_app_eisenphone)
+      name: Notify Service / Benachrichtigungs-Service
+      description: Notify service to send pushes (e.g. notify.mobile_app_phone)
       selector:
         text:
     daily_preview_time:
-      name: Uhrzeit Tagesvorschau
-      description: Wann soll die Tages-Vorschau-Push gesendet werden?
+      name: Daily Preview Time / Uhrzeit Tagesvorschau
+      description: When to send the daily preview push
       default: "08:00:00"
       selector:
         time:
     enable_preview:
-      name: Tagesvorschau aktivieren
-      description: Morgens Push mit allen heutigen Spielen
+      name: Enable Daily Preview / Tagesvorschau aktivieren
       default: true
       selector:
         boolean:
     enable_kickoff:
-      name: Anpfiff-Reminder aktivieren
-      description: 10 Min vor jedem Lieblings-Team-Spiel
+      name: Enable Kick-off Reminder / Anpfiff-Reminder aktivieren
       default: true
       selector:
         boolean:
     enable_live_updates:
-      name: Live-Updates aktivieren
-      description: Halbzeit + Schlusspfiff fuer Lieblings-Team-Spiele
+      name: Enable Live Updates / Live-Updates aktivieren
+      description: Half-time + Full-time push for favorite-team matches
       default: true
       selector:
         boolean:
@@ -67,9 +68,13 @@ trigger:
     to: fulltime
     id: fulltime
 
+variables:
+  t: "{{ state_attr('sensor.wm_2026_bracket','t') or {} }}"
+  fav: "{{ states('input_select.wm_2026_favorite_team') }}"
+
 action:
   - choose:
-      # === Tagesvorschau ===
+      # === Tagesvorschau / Daily Preview ===
       - conditions:
           - condition: trigger
             id: daily_preview
@@ -80,10 +85,9 @@ action:
         sequence:
           - service: "{{ notify_service }}"
             data:
-              title: WM 2026 - Spiele heute
+              title: "{{ t.get('notif_today_title', 'WM 2026 - Spiele heute') }}"
               message: >-
                 {% set games = state_attr('sensor.wm_2026_spiele_heute','spiele') or [] %}
-                {% set fav = states('input_select.wm_2026_favorite_team') %}
                 {%- for g in games -%}
                 {{ g.kickoff }}  {{ g.home_abbr }} vs {{ g.away_abbr }}{% if g.is_favorite %}  ({{ fav }}){% endif %}{% if not loop.last %}
                 {% endif %}
@@ -94,7 +98,7 @@ action:
                 group: wm2026
                 tag: wm2026_tagesvorschau
 
-      # === Anpfiff-Reminder ===
+      # === Anpfiff-Reminder / Kick-off Reminder ===
       - conditions:
           - condition: trigger
             id: kickoff_reminder
@@ -102,19 +106,19 @@ action:
         sequence:
           - service: "{{ notify_service }}"
             data:
-              title: >-
-                Gleich geht's los! ({{ states('input_select.wm_2026_favorite_team') }})
+              title: "{{ t.get('notif_kickoff_title','Gleich gehts los! ({team})').replace('{team}', fav) }}"
               message: >-
                 {% set gegner = state_attr('sensor.wm_2026_lieblings_team_naechstes_spiel','gegner') %}
                 {% set ort = state_attr('sensor.wm_2026_lieblings_team_naechstes_spiel','spielort') %}
-                {{ states('input_select.wm_2026_favorite_team') }} gegen {{ gegner }} in 10 Minuten{% if ort %} - {{ ort }}{% endif %}.
+                {% set venue = (' - ' ~ ort) if ort else '' %}
+                {{ t.get('notif_kickoff_msg','{fav} gegen {opponent} in 10 Minuten{venue}.').replace('{fav}', fav).replace('{opponent}', gegner or '').replace('{venue}', venue) }}
               data:
                 push:
                   interruption-level: time-sensitive
                 group: wm2026
                 tag: wm2026_kickoff
 
-      # === Halbzeit ===
+      # === Halbzeit / Half-time ===
       - conditions:
           - condition: trigger
             id: halftime
@@ -122,8 +126,7 @@ action:
         sequence:
           - service: "{{ notify_service }}"
             data:
-              title: >-
-                Halbzeit - {{ states('input_select.wm_2026_favorite_team') }}
+              title: "{{ t.get('notif_halftime_title','Halbzeit - {team}').replace('{team}', fav) }}"
               message: >-
                 {{ state_attr('sensor.wm_2026_lieblings_team_naechstes_spiel','spielstand') }}
                 ({{ state_attr('sensor.wm_2026_lieblings_team_naechstes_spiel','gegner') }})
@@ -133,7 +136,7 @@ action:
                 group: wm2026
                 tag: wm2026_live
 
-      # === Schlusspfiff ===
+      # === Schlusspfiff / Full-time ===
       - conditions:
           - condition: trigger
             id: fulltime
@@ -141,8 +144,7 @@ action:
         sequence:
           - service: "{{ notify_service }}"
             data:
-              title: >-
-                Schlusspfiff - {{ states('input_select.wm_2026_favorite_team') }}
+              title: "{{ t.get('notif_fulltime_title','Schlusspfiff - {team}').replace('{team}', fav) }}"
               message: >-
                 {{ state_attr('sensor.wm_2026_lieblings_team_naechstes_spiel','spielstand') }}
                 ({{ state_attr('sensor.wm_2026_lieblings_team_naechstes_spiel','gegner') }})

@@ -9,16 +9,21 @@
   <a href="LICENSE"><img src="https://img.shields.io/github/license/eisenkarl/ha-wm-2026?style=flat-square" alt="License"></a>
   <img src="https://img.shields.io/badge/Home%20Assistant-2024.6%2B-41BDF5?logo=home-assistant&style=flat-square&logoColor=white" alt="Home Assistant 2024.6+">
   <img src="https://img.shields.io/badge/HACS-Custom-orange?style=flat-square" alt="HACS Custom">
+  <img src="https://img.shields.io/badge/i18n-de%20%7C%20en-green?style=flat-square" alt="Sprachen">
 </p>
 
-Eine komplette Home-Assistant-Lösung zur Verfolgung der FIFA Fussball-Weltmeisterschaft 2026 (USA / Kanada / Mexiko, 11. Juni - 19. Juli 2026). Liefert Tagesübersicht, alle 12 Gruppen mit Live-Tabellen, kompletten KO-Bracket und Push-Benachrichtigungen für dein Lieblings-Team — direkt in Home Assistant.
+Eine komplette Home-Assistant-Lösung zur Verfolgung der FIFA Fussball-Weltmeisterschaft 2026 (USA / Kanada / Mexiko, 11. Juni - 19. Juli 2026). Liefert Tagesübersicht, alle 12 Gruppen mit Live-Tabellen, kompletten KO-Bracket und Push-Benachrichtigungen für dein Lieblings-Team — direkt in Home Assistant. Verfügbar auf **Deutsch und Englisch** — Sprache jederzeit per UI-Dropdown umschaltbar.
+
+**English README:** [README.en.md](README.en.md)
 
 ## Features
 
 - **Tagesübersicht** aller WM-Spiele (heute oder nächster Spieltag)
 - **Komplette Gruppenphase** - alle 12 Gruppen (A-L) mit Live-Tabellen und allen 72 Spielen
 - **Komplette KO-Phase** - Sechzehntelfinale, Achtelfinale, Viertelfinale, Halbfinale, Spiel um Platz 3, Finale
-- **Lieblings-Team-Tracker** mit freier Auswahl aus allen 48 Teams (Standard: Deutschland)
+- **Lieblings-Team-Tracker** mit freier Auswahl aus allen 49 Teams (Standard: Deutschland)
+- **Mehrsprachig** - Deutsch und Englisch per Dropdown umschaltbar
+- **Nationalflaggen** für alle Teams (via flagcdn.com, kostenlos, kein Key)
 - **Live-Ergebnisse** und automatische **Sieger-Hervorhebung** während laufender Spiele
 - **Push-Benachrichtigungen** (optional, via Blueprint):
   - Tägliche Vorschau (Uhrzeit wählbar)

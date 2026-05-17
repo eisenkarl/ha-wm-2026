@@ -1,5 +1,5 @@
 # ===================================================================
-# WM 2026 Dashboard - Beispiel-Konfiguration
+# WM 2026 Dashboard - Beispiel-Konfiguration (i18n: de + en)
 # ===================================================================
 # Diese Datei NICHT in /config/ ablegen, sondern den Inhalt im
 # Raw-Konfigurations-Editor eines neuen Dashboards einfuegen:
@@ -9,6 +9,7 @@
 #   -> "Raw-Konfigurations-Editor"
 #   -> kompletten Inhalt durch diese YAML ersetzen
 #
+# Sprache umstellen: helpers -> input_select.wm_2026_language (de/en).
 # Flag-Bilder werden von https://flagcdn.com/ geladen (kostenlos, kein Key).
 # ===================================================================
 
@@ -18,23 +19,25 @@ views:
     path: wm-2026
     icon: mdi:soccer
     cards:
-      # Lieblings-Team-Auswahl (Helper-Karte)
+      # Einstellungen (Team + Sprache)
       - type: entities
-        title: Einstellungen
         show_header_toggle: false
         entities:
           - entity: input_select.wm_2026_favorite_team
-            name: Lieblings-Team
+            name: Favorite Team / Lieblings-Team
+          - entity: input_select.wm_2026_language
+            name: Language / Sprache
 
       # Tagesuebersicht / naechster Spieltag
       - type: markdown
-        title: WM 2026 - Tagesuebersicht
         entities:
           - input_select.wm_2026_favorite_team
+          - input_select.wm_2026_language
           - sensor.wm_2026_spiele_heute
           - sensor.wm_2026_naechster_spieltag
           - sensor.wm_2026_bracket
         content: |
+          {% set t = state_attr('sensor.wm_2026_bracket','t') or {} %}
           {% set iso2_map = state_attr('sensor.wm_2026_bracket','iso2_map') or {} %}
           {%- macro flag(abbr, size='20x15') -%}
           ![{{ abbr }}](https://flagcdn.com/{{ size }}/{{ iso2_map.get(abbr,'un') }}.png)
@@ -46,20 +49,22 @@ views:
           {% set tage_bis = state_attr('sensor.wm_2026_naechster_spieltag','tage_bis') | int(0) %}
           {% set fav = states('input_select.wm_2026_favorite_team') %}
 
+          ## {{ t.get('title_today','WM 2026') }}
+
           {% if today_count > 0 %}
-          ### Heute - {{ now().strftime('%A, %d.%m.%Y') }}
+          ### {{ t.get('today','Heute') }} - {{ now().strftime('%A, %d.%m.%Y') }}
           {% set games = today_games %}
           {% elif next_day != 'keine' %}
-          ### Naechster Spieltag: {{ as_datetime(next_day).strftime('%A, %d.%m.%Y') }}
-          *(in {{ tage_bis }} Tag{{ 'en' if tage_bis != 1 else '' }})*
+          ### {{ t.get('next_matchday','Naechster Spieltag') }}: {{ as_datetime(next_day).strftime('%A, %d.%m.%Y') }}
+          *({{ t.get('in_days','in {n} Tag{plural}').replace('{n}', tage_bis | string).replace('{plural}', ('en' if tage_bis != 1 else '') if states('input_select.wm_2026_language') == 'de' else ('s' if tage_bis != 1 else '')) }})*
           {% set games = next_games %}
           {% else %}
-          ### Keine WM-Spiele in Sicht
+          ### {{ t.get('no_matches','Keine WM-Spiele in Sicht') }}
           {% set games = [] %}
           {% endif %}
 
           {% if games | length > 0 %}
-          | Zeit | Begegnung | Status | Ort |
+          | {{ t.col_time }} | {{ t.col_match }} | {{ t.col_status }} | {{ t.col_venue }} |
           |------|-----------|--------|-----|
           {% for g in games -%}
           | **{{ g.kickoff }}** | {{ flag(g.home_abbr) }} {% if g.is_favorite %}**{{ g.home }} - {{ g.away }}**{% else %}{{ g.home }} - {{ g.away }}{% endif %} {{ flag(g.away_abbr) }}{% if g.is_live or g.is_final %} ({{ g.home_score }}:{{ g.away_score }}){% endif %} | {{ g.status }} | {{ g.city }} |
@@ -68,11 +73,12 @@ views:
 
       # Lieblings-Team Fokus
       - type: markdown
-        title: Lieblings-Team - Alle Spiele
         entities:
           - input_select.wm_2026_favorite_team
+          - input_select.wm_2026_language
           - sensor.wm_2026_bracket
         content: |
+          {% set t = state_attr('sensor.wm_2026_bracket','t') or {} %}
           {% set iso2_map = state_attr('sensor.wm_2026_bracket','iso2_map') or {} %}
           {%- macro flag(abbr, size='20x15') -%}
           ![{{ abbr }}](https://flagcdn.com/{{ size }}/{{ iso2_map.get(abbr,'un') }}.png)
@@ -82,35 +88,29 @@ views:
           {% set all_fav = namespace(list=[]) %}
           {% set group_m = state_attr('sensor.wm_2026_bracket','group_matches') or {} %}
           {% set ko_m = state_attr('sensor.wm_2026_bracket','ko_matches') or {} %}
-          {% set phase_labels = {
-            'round-of-32': 'Sechzehntelfinale',
-            'round-of-16': 'Achtelfinale',
-            'quarterfinals': 'Viertelfinale',
-            'semifinals': 'Halbfinale',
-            '3rd-place-match': 'Spiel um Platz 3',
-            'final': 'Finale'
-          } %}
           {% for matches in group_m.values() %}
             {% for m in matches %}
               {% if m.favorite %}
-                {% set all_fav.list = all_fav.list + [{'phase':'Gruppenphase','m':m}] %}
+                {% set all_fav.list = all_fav.list + [{'phase': t.phase_group, 'm': m}] %}
               {% endif %}
             {% endfor %}
           {% endfor %}
           {% for slug, matches in ko_m.items() %}
             {% for m in matches %}
               {% if m.favorite %}
-                {% set all_fav.list = all_fav.list + [{'phase': phase_labels.get(slug, slug),'m':m}] %}
+                {% set all_fav.list = all_fav.list + [{'phase': t.get('phase_' ~ slug, slug), 'm': m}] %}
               {% endif %}
             {% endfor %}
           {% endfor %}
 
-          ![flag](https://flagcdn.com/32x24/{{ fav_iso2 }}.png) **Team: {{ fav }}**
+          ## {{ t.get('title_favorite','Lieblings-Team - Alle Spiele') }}
+
+          ![flag](https://flagcdn.com/32x24/{{ fav_iso2 }}.png) **{{ t.team }}: {{ fav }}**
 
           {% if all_fav.list | length == 0 %}
-          *Noch keine {{ fav }}-Spiele im Bracket.*
+          *{{ t.get('no_fav_matches','').replace('{team}', fav) }}*
           {% else %}
-          | Phase | Datum | Begegnung | Status |
+          | {{ t.col_phase }} | {{ t.col_date }} | {{ t.col_match }} | {{ t.col_status }} |
           |-------|-------|-----------|--------|
           {% for entry in all_fav.list | sort(attribute='m.date') -%}
           | {{ entry.phase }} | {{ as_datetime(entry.m.date).strftime('%d.%m. %H:%M') }} | {{ flag(entry.m.home.abbr) }} {% if entry.m.home.winner %}**{{ entry.m.home.name }}**{% else %}{{ entry.m.home.name }}{% endif %} {% if entry.m.is_final or entry.m.is_live %}**{{ entry.m.home.score }}:{{ entry.m.away.score }}**{% else %}-{% endif %} {% if entry.m.away.winner %}**{{ entry.m.away.name }}**{% else %}{{ entry.m.away.name }}{% endif %} {{ flag(entry.m.away.abbr) }} | {{ entry.m.status }} |
@@ -119,11 +119,12 @@ views:
 
       # Gruppenphase
       - type: markdown
-        title: WM 2026 - Gruppenphase
         entities:
           - input_select.wm_2026_favorite_team
+          - input_select.wm_2026_language
           - sensor.wm_2026_bracket
         content: |
+          {% set t = state_attr('sensor.wm_2026_bracket','t') or {} %}
           {% set iso2_map = state_attr('sensor.wm_2026_bracket','iso2_map') or {} %}
           {%- macro flag(abbr, size='20x15') -%}
           ![{{ abbr }}](https://flagcdn.com/{{ size }}/{{ iso2_map.get(abbr,'un') }}.png)
@@ -131,21 +132,24 @@ views:
           {% set fav = states('input_select.wm_2026_favorite_team') %}
           {% set groups = state_attr('sensor.wm_2026_bracket','groups') or {} %}
           {% set matches = state_attr('sensor.wm_2026_bracket','group_matches') or {} %}
+
+          ## {{ t.get('title_groups','WM 2026 - Gruppenphase') }}
+
           {% for g in groups.keys() | sort %}
           {% set teams = groups[g] %}
           {% set is_fav_group = teams | selectattr('favorite') | list | length > 0 %}
 
-          ### Gruppe {{ g }}{% if is_fav_group %} {{ flag(fav, '20x15') }}{% endif %}
+          ### {{ t.group }} {{ g }}{% if is_fav_group %} {{ flag(fav, '20x15') }}{% endif %}
 
-          | # | Team | Sp | S | U | N | Tore | Diff | Pkt |
+          | {{ t.col_rank }} | {{ t.col_team }} | {{ t.col_played }} | {{ t.col_won }} | {{ t.col_draw }} | {{ t.col_loss }} | {{ t.col_goals }} | {{ t.col_diff }} | {{ t.col_pts }} |
           |---|------|----|----|----|----|------|------|-----|
-          {% for t in teams -%}
-          | {{ t.rank }} | {{ flag(t.abbr) }} {% if t.favorite %}**{{ t.team }}**{% else %}{{ t.team }}{% endif %} | {{ t.played }} | {{ t.won }} | {{ t.draw }} | {{ t.loss }} | {{ t.gf }}:{{ t.ga }} | {{ '%+d' % t.gd }} | **{{ t.pts }}** |
+          {% for tm in teams -%}
+          | {{ tm.rank }} | {{ flag(tm.abbr) }} {% if tm.favorite %}**{{ tm.team }}**{% else %}{{ tm.team }}{% endif %} | {{ tm.played }} | {{ tm.won }} | {{ tm.draw }} | {{ tm.loss }} | {{ tm.gf }}:{{ tm.ga }} | {{ '%+d' % tm.gd }} | **{{ tm.pts }}** |
           {% endfor %}
 
           {% set games = matches.get(g, []) %}
           {% if games | length > 0 %}
-          **Spiele:**
+          **{{ t.matches }}:**
           {% for m in games -%}
           - {{ as_datetime(m.date).strftime('%d.%m. %H:%M') }}: {% if m.favorite %}⭐ {% endif -%}
           {{ flag(m.home.abbr) }} {% if m.home.winner %}**{{ m.home.name }}**{% else %}{{ m.home.name }}{% endif %}
@@ -159,32 +163,29 @@ views:
 
       # KO-Phase
       - type: markdown
-        title: WM 2026 - KO-Phase
         entities:
           - input_select.wm_2026_favorite_team
+          - input_select.wm_2026_language
           - sensor.wm_2026_bracket
         content: |
+          {% set t = state_attr('sensor.wm_2026_bracket','t') or {} %}
           {% set iso2_map = state_attr('sensor.wm_2026_bracket','iso2_map') or {} %}
           {%- macro flag(abbr, size='20x15') -%}
           ![{{ abbr }}](https://flagcdn.com/{{ size }}/{{ iso2_map.get(abbr,'un') }}.png)
           {%- endmacro -%}
           {% set ko = state_attr('sensor.wm_2026_bracket','ko_matches') or {} %}
-          {% set labels = {
-            'round-of-32': 'Sechzehntelfinale',
-            'round-of-16': 'Achtelfinale',
-            'quarterfinals': 'Viertelfinale',
-            'semifinals': 'Halbfinale',
-            '3rd-place-match': 'Spiel um Platz 3',
-            'final': 'Finale'
-          } %}
-          {% for slug, label in labels.items() %}
-          ### {{ label }}
+          {% set ko_slugs = ['round-of-32', 'round-of-16', 'quarterfinals', 'semifinals', '3rd-place-match', 'final'] %}
+
+          ## {{ t.get('title_ko','WM 2026 - KO-Phase') }}
+
+          {% for slug in ko_slugs %}
+          ### {{ t.get('phase_' ~ slug, slug) }}
 
           {% set games = ko.get(slug, []) %}
           {% if games | length == 0 %}
-          *(Keine Daten)*
+          *{{ t.ko_empty }}*
           {% else %}
-          | Datum | Begegnung | Ort |
+          | {{ t.col_date }} | {{ t.col_match }} | {{ t.col_venue }} |
           |-------|-----------|-----|
           {% for g in games -%}
           | **{{ as_datetime(g.date).strftime('%d.%m. %H:%M') }}** | {% if g.favorite %}⭐ {% endif -%}
@@ -196,4 +197,4 @@ views:
           {% endfor %}
 
           ---
-          *Aktualisiert: {{ as_datetime(state_attr('sensor.wm_2026_bracket','fetched_at')).strftime('%d.%m.%Y %H:%M') if state_attr('sensor.wm_2026_bracket','fetched_at') else '-' }}*
+          *{{ t.updated }}: {{ as_datetime(state_attr('sensor.wm_2026_bracket','fetched_at')).strftime('%d.%m.%Y %H:%M') if state_attr('sensor.wm_2026_bracket','fetched_at') else '-' }}*

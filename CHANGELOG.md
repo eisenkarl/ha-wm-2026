@@ -2,6 +2,20 @@
 
 Alle nennenswerten Aenderungen an diesem Projekt werden hier dokumentiert.
 
+## [1.3.0] - 2026-05-17
+
+### Hinzugefuegt / Added
+- Mehrsprachigkeit: Deutsch (de) + Englisch (en) per `input_select.wm_2026_language` umschaltbar
+- Vollstaendige i18n im Dashboard (Titel, Tabellen-Header, Phasen-Namen) und im Blueprint
+- `t` (Translation-Dict) als Attribut am Bracket-Sensor
+- README.en.md fuer englischsprachige User
+- Badge "i18n: de | en" im README
+
+### Geaendert / Changed
+- Python-Skript akzeptiert zweites Argument fuer Sprache (`de`/`en`)
+- Blueprint-Texte sind jetzt bilingual und holen sich Strings dynamisch aus dem Sensor
+- Bracket-Refresh-Automation triggert nun auch bei Sprachwechsel
+
 ## [1.2.1] - 2026-05-17
 
 ### Behoben

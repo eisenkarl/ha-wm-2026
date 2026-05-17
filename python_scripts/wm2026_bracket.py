@@ -105,8 +105,120 @@ FIFA_TO_ISO2 = {
 # Lieblings-Team kann via Env-Variable oder CLI-Arg gesetzt werden.
 # Default: GER (Deutschland). Beispiele: AUT, SUI, ITA, BRA, ARG, ESP, ENG, FRA, NED, USA
 FAV_TEAM = "GER"
+LANG = "de"
 if len(sys.argv) > 1 and sys.argv[1].strip():
     FAV_TEAM = sys.argv[1].strip().upper()
+if len(sys.argv) > 2 and sys.argv[2].strip():
+    LANG = sys.argv[2].strip().lower()
+    if LANG not in ("de", "en"):
+        LANG = "de"
+
+# i18n-Strings: alle UI-Texte fuer Dashboard und Notifications.
+# Werden als Attribut am Bracket-Sensor mitgeliefert, damit Lovelace die Texte
+# direkt lesen kann (ohne separaten Template-Sensor).
+I18N = {
+    "de": {
+        # Card-Titel
+        "title_settings": "Einstellungen",
+        "title_today": "WM 2026 - Tagesuebersicht",
+        "title_favorite": "Lieblings-Team - Alle Spiele",
+        "title_groups": "WM 2026 - Gruppenphase",
+        "title_ko": "WM 2026 - KO-Phase",
+        # Helper-Namen
+        "label_favorite_team": "Lieblings-Team",
+        "label_language": "Sprache / Language",
+        # Tagesuebersicht
+        "today": "Heute",
+        "next_matchday": "Naechster Spieltag",
+        "in_days": "in {n} Tag{plural}",
+        "no_matches": "Keine WM-Spiele in Sicht",
+        # Tabellen-Header
+        "col_time": "Zeit",
+        "col_match": "Begegnung",
+        "col_status": "Status",
+        "col_venue": "Ort",
+        "col_date": "Datum",
+        "col_phase": "Phase",
+        "col_rank": "#",
+        "col_team": "Team",
+        "col_played": "Sp",
+        "col_won": "S",
+        "col_draw": "U",
+        "col_loss": "N",
+        "col_goals": "Tore",
+        "col_diff": "Diff",
+        "col_pts": "Pkt",
+        # Group
+        "group": "Gruppe",
+        "matches": "Spiele",
+        # Favorite
+        "no_fav_matches": "Noch keine {team}-Spiele im Bracket.",
+        "phase_group": "Gruppenphase",
+        "team": "Team",
+        # KO-Phasen-Namen
+        "phase_round-of-32": "Sechzehntelfinale",
+        "phase_round-of-16": "Achtelfinale",
+        "phase_quarterfinals": "Viertelfinale",
+        "phase_semifinals": "Halbfinale",
+        "phase_3rd-place-match": "Spiel um Platz 3",
+        "phase_final": "Finale",
+        "ko_empty": "(Keine Daten)",
+        # Footer
+        "updated": "Aktualisiert",
+        # Notifications
+        "notif_today_title": "WM 2026 - Spiele heute",
+        "notif_kickoff_title": "Gleich geht's los! ({team})",
+        "notif_kickoff_msg": "{fav} gegen {opponent} in 10 Minuten{venue}.",
+        "notif_halftime_title": "Halbzeit - {team}",
+        "notif_fulltime_title": "Schlusspfiff - {team}",
+    },
+    "en": {
+        "title_settings": "Settings",
+        "title_today": "WC 2026 - Daily Overview",
+        "title_favorite": "Favorite Team - All Matches",
+        "title_groups": "WC 2026 - Group Stage",
+        "title_ko": "WC 2026 - Knockout Stage",
+        "label_favorite_team": "Favorite Team",
+        "label_language": "Language / Sprache",
+        "today": "Today",
+        "next_matchday": "Next Matchday",
+        "in_days": "in {n} day{plural}",
+        "no_matches": "No upcoming WC matches",
+        "col_time": "Time",
+        "col_match": "Match",
+        "col_status": "Status",
+        "col_venue": "Venue",
+        "col_date": "Date",
+        "col_phase": "Phase",
+        "col_rank": "#",
+        "col_team": "Team",
+        "col_played": "P",
+        "col_won": "W",
+        "col_draw": "D",
+        "col_loss": "L",
+        "col_goals": "Goals",
+        "col_diff": "Diff",
+        "col_pts": "Pts",
+        "group": "Group",
+        "matches": "Matches",
+        "no_fav_matches": "No {team} matches in the bracket yet.",
+        "phase_group": "Group Stage",
+        "team": "Team",
+        "phase_round-of-32": "Round of 32",
+        "phase_round-of-16": "Round of 16",
+        "phase_quarterfinals": "Quarterfinals",
+        "phase_semifinals": "Semifinals",
+        "phase_3rd-place-match": "3rd Place Match",
+        "phase_final": "Final",
+        "ko_empty": "(No data)",
+        "updated": "Updated",
+        "notif_today_title": "WC 2026 - Today's Matches",
+        "notif_kickoff_title": "Kicking off! ({team})",
+        "notif_kickoff_msg": "{fav} vs {opponent} in 10 minutes{venue}.",
+        "notif_halftime_title": "Half-time - {team}",
+        "notif_fulltime_title": "Full-time - {team}",
+    },
+}
 
 
 def fetch(url):
@@ -229,10 +341,12 @@ def main():
         "fetched_at": datetime.now(timezone.utc).isoformat(),
         "favorite_team": FAV_TEAM,
         "favorite_iso2": FIFA_TO_ISO2.get(FAV_TEAM, "un"),
+        "language": LANG,
         "groups": groups,
         "group_matches": group_matches,
         "ko_matches": ko_matches,
         "iso2_map": FIFA_TO_ISO2,
+        "t": I18N[LANG],
     }
     if errors:
         out["errors"] = errors

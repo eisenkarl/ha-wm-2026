@@ -77,16 +77,25 @@ input_select:
       - RSA  # Suedafrika
       - CZE  # Tschechien
 
+  wm_2026_language:
+    name: WM 2026 Language / Sprache
+    icon: mdi:translate
+    options:
+      - de
+      - en
+
 # -------------------------------------------------------------------
-# Automation: Bracket sofort neu laden wenn Lieblings-Team geaendert
+# Automation: Bracket sofort neu laden bei Team- oder Sprachwechsel
 # -------------------------------------------------------------------
 automation:
   - id: wm2026_refresh_on_team_change
-    alias: WM 2026 - Bracket bei Team-Wechsel sofort neu laden
-    description: Sobald das Lieblings-Team geaendert wird, wird der command_line Sensor unverzueglich neu aufgerufen
+    alias: WM 2026 - Bracket bei Team-/Sprach-Wechsel sofort neu laden
+    description: Sobald Lieblings-Team oder Sprache geaendert wird, wird der command_line Sensor unverzueglich neu aufgerufen
     triggers:
       - trigger: state
-        entity_id: input_select.wm_2026_favorite_team
+        entity_id:
+          - input_select.wm_2026_favorite_team
+          - input_select.wm_2026_language
     actions:
       - action: homeassistant.update_entity
         target:
@@ -114,10 +123,11 @@ command_line:
   - sensor:
       name: WM 2026 Bracket
       unique_id: wm_2026_bracket
-      # Skript-Aufruf mit gewaehltem Lieblings-Team als Argument
+      # Skript-Aufruf mit gewaehltem Lieblings-Team und Sprache als Argumente
       command: >-
         python3 /config/python_scripts/wm2026_bracket.py
         "{{ states('input_select.wm_2026_favorite_team') }}"
+        "{{ states('input_select.wm_2026_language') }}"
       scan_interval: 1800
       command_timeout: 30
       value_template: "{{ value_json.count }}"
@@ -127,6 +137,8 @@ command_line:
         - ko_matches
         - favorite_team
         - favorite_iso2
+        - language
+        - t
         - iso2_map
         - fetched_at
 
