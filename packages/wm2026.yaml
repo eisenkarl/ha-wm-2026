@@ -78,6 +78,22 @@ input_select:
       - CZE  # Tschechien
 
 # -------------------------------------------------------------------
+# Automation: Bracket sofort neu laden wenn Lieblings-Team geaendert
+# -------------------------------------------------------------------
+automation:
+  - id: wm2026_refresh_on_team_change
+    alias: WM 2026 - Bracket bei Team-Wechsel sofort neu laden
+    description: Sobald das Lieblings-Team geaendert wird, wird der command_line Sensor unverzueglich neu aufgerufen
+    triggers:
+      - trigger: state
+        entity_id: input_select.wm_2026_favorite_team
+    actions:
+      - action: homeassistant.update_entity
+        target:
+          entity_id: sensor.wm_2026_bracket
+    mode: single
+
+# -------------------------------------------------------------------
 # REST-Sensor: Aktuelle / naechste WM-Spiele (kleines Fenster)
 # -------------------------------------------------------------------
 rest:

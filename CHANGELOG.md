@@ -2,6 +2,12 @@
 
 Alle nennenswerten Aenderungen an diesem Projekt werden hier dokumentiert.
 
+## [1.2.1] - 2026-05-17
+
+### Behoben
+- Lieblings-Team-Wechsel war erst nach bis zu 30 Minuten sichtbar (command_line scan_interval)
+- Neue Automation `wm2026_refresh_on_team_change` aktualisiert den Bracket-Sensor sofort beim Team-Wechsel
+
 ## [1.2.0] - 2026-05-17
 
 ### Hinzugefuegt
