@@ -2,6 +2,12 @@
 
 Alle nennenswerten Aenderungen an diesem Projekt werden hier dokumentiert.
 
+## [1.0.1] - 2026-05-17
+
+### Hinzugefuegt
+- Logo (logo.png) und Icon (icon.png) für Repo + HACS
+- Badges im README (Release, License, HA-Version, HACS)
+
 ## [1.0.0] - 2026-05-17
 
 ### Hinzugefuegt

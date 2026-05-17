@@ -1,5 +1,7 @@
 # WM 2026 - FIFA World Cup Tracker
 
+<p align="center"><img src="docs/images/icon.png" width="160" alt="WM 2026"></p>
+
 Komplette Home-Assistant-Loesung fuer die WM 2026 mit Tagesuebersicht, Live-Ergebnissen, kompletter Gruppenphase mit Tabellen, KO-Bracket und Push-Benachrichtigungen fuer dein Lieblings-Team.
 
 **Datenquelle:** ESPN inoffizielle JSON-API (kein API-Key noetig).

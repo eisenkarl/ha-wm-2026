@@ -1,6 +1,17 @@
 # WM 2026 - Home Assistant Integration
 
-Eine komplette Home-Assistant-Lösung zur Verfolgung der FIFA Fussball-Weltmeisterschaft 2026 (USA / Kanada / Mexiko, 11. Juni - 19. Juli 2026).
+<p align="center">
+  <img src="docs/images/logo.png" alt="WM 2026 Home Assistant Integration" width="100%">
+</p>
+
+<p align="center">
+  <a href="https://github.com/eisenkarl/ha-wm-2026/releases"><img src="https://img.shields.io/github/v/release/eisenkarl/ha-wm-2026?style=flat-square" alt="Release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/eisenkarl/ha-wm-2026?style=flat-square" alt="License"></a>
+  <img src="https://img.shields.io/badge/Home%20Assistant-2024.6%2B-41BDF5?logo=home-assistant&style=flat-square&logoColor=white" alt="Home Assistant 2024.6+">
+  <img src="https://img.shields.io/badge/HACS-Custom-orange?style=flat-square" alt="HACS Custom">
+</p>
+
+Eine komplette Home-Assistant-Lösung zur Verfolgung der FIFA Fussball-Weltmeisterschaft 2026 (USA / Kanada / Mexiko, 11. Juni - 19. Juli 2026). Liefert Tagesübersicht, alle 12 Gruppen mit Live-Tabellen, kompletten KO-Bracket und Push-Benachrichtigungen für dein Lieblings-Team — direkt in Home Assistant.
 
 ## Features
 
