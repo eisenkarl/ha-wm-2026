@@ -5,7 +5,13 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/eisenkarl/ha-wm-2026/releases"><img src="https://img.shields.io/github/v/release/eisenkarl/ha-wm-2026?style=flat-square" alt="Release"></a>
+  <a href="https://github.com/eisenkarl/ha-wm-2026/releases/latest"><img src="https://img.shields.io/github/v/release/eisenkarl/ha-wm-2026?style=flat-square&label=Release" alt="Latest Release"></a>
+  <a href="https://github.com/eisenkarl/ha-wm-2026/releases"><img src="https://img.shields.io/github/downloads/eisenkarl/ha-wm-2026/total?style=flat-square&label=Downloads&color=brightgreen" alt="Downloads"></a>
+  <a href="https://github.com/eisenkarl/ha-wm-2026/stargazers"><img src="https://img.shields.io/github/stars/eisenkarl/ha-wm-2026?style=flat-square&label=Stars" alt="Stars"></a>
+  <a href="https://github.com/eisenkarl/ha-wm-2026/network/members"><img src="https://img.shields.io/github/forks/eisenkarl/ha-wm-2026?style=flat-square&label=Forks" alt="Forks"></a>
+  <a href="https://github.com/eisenkarl/ha-wm-2026/commits/main"><img src="https://img.shields.io/github/last-commit/eisenkarl/ha-wm-2026?style=flat-square&label=Last%20Commit" alt="Last Commit"></a>
+  <a href="https://github.com/eisenkarl/ha-wm-2026/issues"><img src="https://img.shields.io/github/issues/eisenkarl/ha-wm-2026?style=flat-square&label=Issues" alt="Open Issues"></a>
+  <br>
   <a href="LICENSE"><img src="https://img.shields.io/github/license/eisenkarl/ha-wm-2026?style=flat-square" alt="License"></a>
   <img src="https://img.shields.io/badge/Home%20Assistant-2024.6%2B-41BDF5?logo=home-assistant&style=flat-square&logoColor=white" alt="Home Assistant 2024.6+">
   <img src="https://img.shields.io/badge/HACS-Custom-orange?style=flat-square" alt="HACS Custom">
