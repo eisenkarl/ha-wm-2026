@@ -6,3 +6,6 @@ __pycache__/
 *.swp
 *.bak
 node_modules/
+
+# Lokal erzeugte Release-ZIPs (werden ohnehin als Release-Assets hochgeladen)
+ha-wm-2026-v*.zip
